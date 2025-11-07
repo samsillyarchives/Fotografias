@@ -1,6 +1,7 @@
 import './style.css'
 import * as THREE from 'three' 
-import { addDefaultMeshes } from './addDefaultMeshes.js'
+import { addDefaultMeshes, addStandardMesh } from './addDefaultMeshes.js'
+import { addLight } from './addLight.js'
 
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(
@@ -12,39 +13,32 @@ camera.position.set(0,0,5)
 const renderer = new THREE.WebGLRenderer({antialias: true})
 
 const meshes = {} 
+const lights = {}
 
 init()
 
 function init(){
   renderer.setSize(window.innerWidth, window.innerHeight)
-  //calculates what should be on our screen - this is full screen
+ 
   document.body.appendChild(renderer.domElement)
-  // tell our website body to go to website 
-
-  //add our meshes into our container then add to scene 
+  
   meshes.default = addDefaultMeshes() 
-  meshes.defaultbelow = addDefaultMeshes()
-  meshes.copy = addDefaultMeshes()
-  meshes.another = addDefaultMeshes()
+  meshes.standard = addStandardMesh({xpos: 2})
 
-  meshes.defaultbelow.position.y = -4
-  meshes.copy.position.x = 4
-  meshes.another.position.x = -4
-
-  // add to scene 
+  lights.directional = addLight()
+  
   scene.add(meshes.default)
-  scene.add(meshes.defaultbelow)
-  scene.add(meshes.copy)
-  scene.add(meshes.another)
+  scene.add(meshes.standard)
+  scene.add(lights.directional)
 
   animate()
 }
 
 function animate(){
-  meshes.default.position.y += .005
-  meshes.defaultbelow.position.y += .005
-  meshes.copy.position.y -= .005
-  meshes.another.position.y -= .005
+  meshes.standard.rotation.x += 0.01
+  meshes.standard.rotation.y += 0.01
+  meshes.default.rotation.x -= 0.01
+  meshes.default.rotation.y -= 0.01
   requestAnimationFrame(animate)
   renderer.render(scene, camera)
 }
