@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { addDefaultMeshes, addStandardMesh } from './addDefaultMeshes.js'
 import { addLight } from './addLight.js'
 import Model from './model'
+import { manager } from './manager'
 
 
 const scene = new THREE.Scene()
@@ -19,6 +20,7 @@ const lights = {}
 const mixers = []
 
 const clock = new THREE.Clock()
+const loadingManager = manager()
 
 init()
 
@@ -50,11 +52,15 @@ function instances(){
     position: new THREE.Vector3(0,-0.8,3),
     animationState: true, 
     mixers: mixers,
+    replace: true, 
+    replaceURL: '/mat.png',
+    manager: loadingManager,
   })
   flowers.init()
 
 }
 function animate(){
+
   const delta = clock.getDelta()
   for (const mixer of mixers){
     mixer.update(delta)
