@@ -141,7 +141,7 @@ function raycast() {
             }, 4000)
           }
          })
-         break;
+         return
         //gsap.delayedCall(4, captureSnapshot, null, null) 
       }
 				object = object.parent
@@ -151,19 +151,27 @@ function raycast() {
 }
 
 function captureSnapshot() {
-    // Ensure the scene is rendered one last time to capture the current state
-    renderer.render(scene, camera); 
-    
-    const imageDataUrl = renderer.domElement.toDataURL('image/png');
-    
+  renderer.render(scene, camera)
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  const width = 1280 
+  const height = 720 
+  canvas.width = width 
+  canvas.height = height
+  context.drawImage(video, 0, 0, width, height)
+  const data = canvas.toDataURL('image/png')
+  const link = document.createElement('a')
+  link.download = `webcam-photo-${Date.now()}.png`
+    link.href = data 
     // Logic to handle the snapshot (e.g., download it automatically)
-    const link = document.createElement('a');
-    link.download = 'webcam-snapshot.png';
-    link.href = imageDataUrl;
-    document.body.appendChild(link);
+    //const link = document.createElement('a');
+    //link.download = 'webcam-snapshot.png';
+    //link.href = imageDataUrl;
+    link.addEventListener('click', (e) => e.stopPropagation())
+    document.body.appendChild(link)
     link.click();
-    document.body.removeChild(link);
-    console.log("Snapshot captured automatically!");
+    document.body.removeChild(link)
+    console.log("Snapshot captured automatically!")
 }
 
 function instances(){
