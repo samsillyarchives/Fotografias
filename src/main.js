@@ -85,7 +85,38 @@ function init(){
   raycast()
   animate()
 }
+// This is the countdown interface ill make it a function on main cuz it seems easier
+// perhaps its better to put in in the html and css files respectively but idk how to do that yet
 
+function countdownUI() {
+  // crate the div (html)
+  // the internet told me this is how to create html elements with js
+  const countdownDiv = document.createElement('div')
+
+  countdownDiv.id = 'countdown' // naming the div
+
+  // css styling for the div
+  // could be done in the css file perchance 
+
+  // again idk what the ` is but it works for the syntax cuz google
+  countdownDiv.style.cssText = `
+  position: fixed; /* this is how you comment in css */
+  top: 50%; 
+  left: 50%; /* make the div centered */
+  transform: translate(-50%, -50%);
+  font-size: 150px;
+  font-weight: bold;
+  color: red;
+  text-shadow: 0 0 20px black;
+  display: none; /* hide until needed */
+  z-index: 1000; /* at the very top of all elements */
+  font-family: Arial, sans-serif;
+  `
+
+  //adds the div to the page
+  document.body.appendChild(countdownDiv) 
+
+}
 function webcam() {
 	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) { // checks if we can use webcam 
 		const constraints = {
@@ -142,7 +173,7 @@ function photoBoothSequence(){
             y: 0,
             z: 1.6,
             duration: 2,
-            animation: "power2.inOut",
+            animation: "power4.inOut",
 					})
           gsap.to(camera.rotation, {
             x: 0,
@@ -150,27 +181,102 @@ function photoBoothSequence(){
             z: 0,
             duration: 2,
             delay: 1,
-            animation: "power2.inOut",
+            animation: "power4.inOut",
           })
           gsap.to(camera.position, {
             x: -.3,
             z: 1.40,
             duration: 1,
             delay: 1.4,
-            animation: "power2.inOut",
+            animation: "power4.inOut",
          })
          gsap.to(meshes.webcam, {
           visible: true,
           duration: 1, 
           delay: 3.4,
-          animation: "power2.inOut",
+          animation: "power4.inOut", //check animation it says these aren't imported or something in console 
           onComplete: () => { 
-            window.setTimeout(() => {
-              captureSnapshot()
-            }, 4000)
+            
+            // we now call the function we made to take the three pictures
+            countdownUI() // create the countdown div first 
+            // we had made the function but never called it so the thingy was not working 
+            // cant refer to something not created yet 
+            setTimeout(() => {
+              countdownAndPictures() 
+            }, 1000)
           }
          })
 } 
+
+// function that calls countdown and takes 3 pictures
+// called at the end of the gsap timeline function above
+
+function countdownAndPictures(){
+  // reference the countdown UI div by assigning to a variable
+  const countdownDiv = document.getElementById('countdown')
+
+  // make a counter so we can keep track of how many pictures taken
+  let photoCount = 0 
+
+  // function inside the function to do coundown and picutre taking 
+  // multiple times 
+  // were going to use it like a while loop with the counter as a sentinel value
+
+  function takePhoto(photoNumber){
+
+    let count = 3 // start the countdown display at 3
+
+    // make the div visible this was previously None
+    console.log('countdownDiv:', countdownDiv);
+    countdownDiv.style.display = 'block' 
+
+    countdownDiv.textContent = count 
+    // the text is the string store in count 
+
+    // create interval to count down every second
+    const countdownInterval = setInterval(() => {
+      count-- // this is like count -= 1 in python 
+
+      if (count > 0){
+        countdownDiv.textContent = count 
+        // so 3,2,1 will be displayed
+      } else {
+        clearInterval(countdownInterval) // stops the countdown
+
+        countdownDiv.textContent = 'Smile :)' // shows cute message instead of 0
+
+        setTimeout(() => {
+
+          captureSnapshot() //take the picture
+
+          // then we will prompr the bloom effect to act as flash here
+          // along with like a shutter sound perhaps
+
+          countdownDiv.style.display = 'none'
+          // we hide the div again 
+
+          photoCount++ // we tell the counter we took a picture 
+          // photoCount += 1 in python
+
+          if (photoCount < 3){
+            setTimeout(() => takePhoto(photoCount), 2000) 
+            // we call the take photo function again after 2 seconds 
+            // very recursion vibes 
+          } else {
+            setTimeout(() => {
+              // we will add instruction to make the photostrip here
+              // probably like a second delay 
+            })
+          }
+        }, 500)
+      }
+
+    }, 1000) // makes sure it runs every 1 second 
+
+  }
+
+  takePhoto(0) // initializes the first call to function
+}
 
 function captureSnapshot() {
   renderer.render(scene, camera)
