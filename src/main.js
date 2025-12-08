@@ -1,59 +1,68 @@
 import './style.css'
 import * as THREE from 'three' 
-import { addDefaultMeshes, addStandardMesh } from './addDefaultMeshes.js'
-import { addLight } from './addLight.js'
+//import { addDefaultMeshes, addStandardMesh } from './addDefaultMeshes.js'
+//import { addLight } from './addLight.js'
 import Model from './model'
 import { manager } from './manager'
 import { HDRI } from './enviornment.js'
 import { rotate } from 'three/tsl'
 import { emissive } from 'three/src/nodes/TSL.js'
 import gsap from 'gsap' // so we can do animation!!!
+
 //import { InteractionManager } from 'three.interaction' // we need this to manage the click stuff
 
 
 
 const scene = new THREE.Scene()
+
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
   1000)
+
 camera.position.set(0,0,5)
+
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
-  preserveDrawingBuffer: true, 
+  preserveDrawingBuffer: true, //This allows us to take screenshots
 })
 
 const meshes = {} 
 const lights = {}
 const mixers = []
-const pointer = new THREE.Vector2()
-const raycaster = new THREE.Raycaster()
+
+const pointer = new THREE.Vector2() // tracks mouse position 
+const raycaster = new THREE.Raycaster() // shoots rays to detect meshes 
 
 const clock = new THREE.Clock()
-const loadingManager = manager()
+const loadingManager = manager() // track when meshes are loaded 
 
-//scene.background = HDRI() // idk if ill need this perhaps if the light isnt baked in 
-scene.environment = HDRI()
+//scene.background = HDRI() // idk if ill need the backgroud doesnt fit the vibe
+scene.environment = HDRI() // for lighting 
+
 
 let video
+let capturedPhotos = [] // array that stores photos 
+// I believe in Python this is like capturedPhotos = []
+
 
 init()
 
 function init(){
   renderer.setSize(window.innerWidth, window.innerHeight)
  
-  document.body.appendChild(renderer.domElement)
-
+  document.body.appendChild(renderer.domElement) // adds canvas to the html so we can see it
   video = document.getElementById('video')
 
-  const texture = new THREE.VideoTexture(video)
-	texture.colorSpace = THREE.SRGBColorSpace
+  const texture = new THREE.VideoTexture(video) //makes webcam video a texture
+	texture.colorSpace = THREE.SRGBColorSpace // makes the colors look correct
 
-	const geometry = new THREE.PlaneGeometry(16, 9)
-	geometry.scale(0.039, 0.048, 0.04)
-	const material = new THREE.MeshBasicMaterial({ map: texture })
-	meshes.webcam = new THREE.Mesh(geometry, material)
+	const geometry = new THREE.PlaneGeometry(16, 9) // plane geometry for the webcam video 
+	geometry.scale(0.039, 0.048, 0.04) 
+	const material = new THREE.MeshBasicMaterial({ map: texture }) // this is the video material 
+	meshes.webcam = new THREE.Mesh(geometry, material) // this is the actual mesh
+
   meshes.webcam.visible = false, // hide until gsap animation
   meshes.webcam.position.set(0.1,0,1.20)
   meshes.webcam.rotation.y = -60.5 * (Math.PI / 180)
@@ -69,6 +78,8 @@ function init(){
  // scene.add(meshes.default)
  // scene.add(meshes.standard)
  // scene.add(lights.directional)
+
+
   webcam()
   instances()
   raycast()
@@ -76,38 +87,41 @@ function init(){
 }
 
 function webcam() {
-	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) { // checks if we can use webcam 
 		const constraints = {
-			video: { width: 1280, height: 720, facingMode: 'user' },
+			video: { width: 1280, height: 720, facingMode: 'user' }, // this is what we want from the webcam
 		}
 
-		navigator.mediaDevices
+		navigator.mediaDevices // request access to webcam 
 			.getUserMedia(constraints)
-			.then(function (stream) {
+			.then(function (stream) { // if we got access
 				// apply the stream to the video element used in the texture
 
-				video.srcObject = stream
+				video.srcObject = stream // connect webcam to video element 
 				video.play()
 			})
-			.catch(function (error) {
+			.catch(function (error) { // if we didnt get access
 				console.error('Unable to access the camera/webcam.', error)
 			})
-	} else {
+	} else { // if no webcam available
 		console.error('MediaDevices interface not available.')
 	}
 }
 
 function raycast() {
 	window.addEventListener('click', (event) => {
+
 		pointer.x = (event.clientX / window.innerWidth) * 2 - 1
 		pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
 		raycaster.setFromCamera(pointer, camera)
-		const intersects = raycaster.intersectObjects(scene.children)
-		for (let i = 0; i < intersects.length; i++) {
-			//
+
+		const intersects = raycaster.intersectObjects(scene.children) // list of things the ray intersected 
+
+		for (let i = 0; i < intersects.length; i++) { // loop through the intersected objects
+			
 			let object = intersects[i].object
 			while (object) {
-				if (object.userData.groupName == 'photobooth') {
+				if (object.userData.groupName == 'photobooth') { // check ir we clicked the photobooth if so start the animation
 					gsap.to(camera.position, {
 						x: -.5,
             y: 0,
@@ -152,26 +166,46 @@ function raycast() {
 
 function captureSnapshot() {
   renderer.render(scene, camera)
-  const canvas = document.createElement('canvas')
-  const context = canvas.getContext('2d')
+  const canvas = document.createElement('canvas') // not added to canvas is temporary 
+  const context = canvas.getContext('2d') 
   const width = 1280 
   const height = 720 
   canvas.width = width 
   canvas.height = height
-  context.drawImage(video, 0, 0, width, height)
-  const data = canvas.toDataURL('image/png')
-  const link = document.createElement('a')
-  link.download = `webcam-photo-${Date.now()}.png`
-    link.href = data 
+  context.drawImage(video, 0, 0, width, height) // draw webcam image to canvas
+  const data = canvas.toDataURL('image/png') // create png from canvas
+
+  // Instead of dowloading the image directly we store it so we can take three of them 
+  // and combine them into a photo booth strip later
+
+  //const link = document.createElement('a')
+  //link.download = `webcam-photo-${Date.now()}.png`
+
+  
+  //  put the picture in our array (I think is same vibe as phyton list but only stores items of the same datatype)
+  capturedPhotos.push(data) 
+
+  // to make sure it works we log to console when picture is taken 
+  // not necessary technically makes things easier to debug
+  console.log('Photo ${capturedPhotos.length} taken!') 
+  // ${capturedPhotos.length} tells us the number of photos in the array so far
+
+
+    //link.href = data -- this no longer since we don't download directly
     // Logic to handle the snapshot (e.g., download it automatically)
     //const link = document.createElement('a');
     //link.download = 'webcam-snapshot.png';
     //link.href = imageDataUrl;
-    link.addEventListener('click', (e) => e.stopPropagation())
-    document.body.appendChild(link)
-    link.click();
-    document.body.removeChild(link)
-    console.log("Snapshot captured automatically!")
+
+  // this might need to be changed since we don't download it directly 
+
+  //link.addEventListener('click', (e) => e.stopPropagation())
+  //document.body.appendChild(link)
+  // link.click();
+  // document.body.removeChild(link)
+  // console.log("Snapshot captured automatically!")
+
+  // ^ deleted it and everything still works so I think its fine
 }
 
 function instances(){
