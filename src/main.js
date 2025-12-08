@@ -121,8 +121,23 @@ function raycast() {
 			
 			let object = intersects[i].object
 			while (object) {
+
 				if (object.userData.groupName == 'photobooth') { // check ir we clicked the photobooth if so start the animation
-					gsap.to(camera.position, {
+					
+          // to make things cleaner I moved the sequence into a separate function we canll here 
+           photoBoothSequence() // calling this start the gsap sequence 
+        
+           return 
+      }
+				object = object.parent
+			}
+		}
+	})
+}
+
+function photoBoothSequence(){
+
+  gsap.to(camera.position, {
 						x: -.5,
             y: 0,
             z: 1.6,
@@ -149,20 +164,13 @@ function raycast() {
           duration: 1, 
           delay: 3.4,
           animation: "power2.inOut",
-          onComplete: () => {
+          onComplete: () => { 
             window.setTimeout(() => {
               captureSnapshot()
             }, 4000)
           }
          })
-         return
-        //gsap.delayedCall(4, captureSnapshot, null, null) 
-      }
-				object = object.parent
-			}
-		}
-	})
-}
+} 
 
 function captureSnapshot() {
   renderer.render(scene, camera)
@@ -187,7 +195,7 @@ function captureSnapshot() {
 
   // to make sure it works we log to console when picture is taken 
   // not necessary technically makes things easier to debug
-  console.log('Photo ${capturedPhotos.length} taken!') 
+  console.log(`Photo ${capturedPhotos.length} taken!`) // ` = not regular apostrophe important for syntax idk why
   // ${capturedPhotos.length} tells us the number of photos in the array so far
 
 
