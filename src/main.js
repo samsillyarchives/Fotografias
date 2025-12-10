@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import Model from './model'
 import { manager } from './manager'
 import { HDRI } from './enviornment.js'
-import { rotate } from 'three/tsl'
+import { overlay, rotate } from 'three/tsl'
 import { emissive } from 'three/src/nodes/TSL.js'
 import {gsap}from 'gsap' // so we can do animation!!!
 //import { bloomPass } from './postprocessing.js' 
@@ -50,6 +50,8 @@ let video
 let capturedPhotos = [] // array that stores photos 
 // I believe in Python this is like capturedPhotos = []
 
+// this boolean will prevent multiple clicks while program is running 
+let isPhotoSessionActive = false
 
 
 init()
@@ -233,6 +235,10 @@ function webcam() {
 function raycast() {
 	window.addEventListener('click', (event) => {
 
+    // if a photo session is running the return will automatically
+    // stop everything else from running 
+    if (isPhotoSessionActive) return // if true dont execute the rest of the funciton
+
 		pointer.x = (event.clientX / window.innerWidth) * 2 - 1
 		pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
 		raycaster.setFromCamera(pointer, camera)
@@ -246,6 +252,8 @@ function raycast() {
 
 				if (object.userData.groupName == 'photobooth') { // check ir we clicked the photobooth if so start the animation
 					
+          // we clicked the photobooht start the session and prevent the multiple clicks beginning here
+          isPhotoSessionActive = true
           // to make things cleaner I moved the sequence into a separate function we canll here 
            photoBoothSequence() // calling this start the gsap sequence 
         
@@ -541,8 +549,103 @@ function takeToDownload(photoStripData){
     ease: "power2.inOut",
     onComplete: () => {
       // we show the download page!
+      downloadPage(photoStripData) // pass it the info for the photostrip again 
     }
   })
+}
+
+function downloadPage(photoStripData){
+  const downloadPg = document.createElement('div')
+  downloadPg.id = 'download-page'
+  downloadPg.style.cssText = `
+  position: fixed; 
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  `
+
+  // we must make an image as preview of photostrip
+  const preview = document.createElement('img')
+  preview.src = photoStripData // this is why me must make sure we pass it along throuhout the funcitons 
+  preview.style.cssText = `
+  mas-width: 400px;
+  max-height: 70vh;
+  border: 5pz solid white;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  margin-bottom: 30px;
+  `
+  //dowload button!!!!!! - the most important part
+  const downloadBtn = document.createElement('button')
+  downloadBtn.textContent = 'Download your Photo Strip!'
+  downloadBtn.style.cssText = `
+  padding: 15px 40px;
+  font-size: 20px; 
+  background: #880808;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 15px;
+  `
+
+  // when you click the button you get your picture
+  downloadBtn.onclick = () => {
+    // this is temp link
+    const link = document.createElement('a')
+
+    // the link is title + date for the download link
+    link.download = `fotografias-${Date.now()}-.png`
+
+    // we set the file data
+    link.href = photoStripData
+
+    //start download
+    link.click()
+  }
+
+  // button to restart everything lol
+  const resetBtn = document.createElement('button')
+  resetBtn.textContent = 'Take Another!'
+  resetBtn.style.cssText = `
+  padding: 15px 40px;
+  font-size: 18px;
+  background: white;
+  color: #880808;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  `
+
+  //when click button remove overlay and restart everything 
+  resetBtn.onclick = () => {
+    document.body.removeChild(downloadPg)
+
+    // then we call function to reset everything 
+    reset()
+  }
+
+  downloadPg.appendChild(preview)
+  downloadPg.appendChild(downloadBtn)
+  downloadPg.appendChild(resetBtn)
+  
+  document.body.appendChild(downloadPg)
+
+}
+
+function reset() {
+  // we clear the array
+  capturedPhotos = []
+
+  // allow click again
+  isPhotoSessionActive = false
+  
 }
 
 function instances(){
