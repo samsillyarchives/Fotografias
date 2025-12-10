@@ -7,7 +7,10 @@ import { manager } from './manager'
 import { HDRI } from './enviornment.js'
 import { rotate } from 'three/tsl'
 import { emissive } from 'three/src/nodes/TSL.js'
-import gsap from 'gsap' // so we can do animation!!!
+import {gsap}from 'gsap' // so we can do animation!!!
+//import { bloomPass } from './postprocessing.js' 
+import { postprocessing } from './postprocessing.js'
+
 
 //import { InteractionManager } from 'three.interaction' // we need this to manage the click stuff
 
@@ -37,6 +40,8 @@ const raycaster = new THREE.Raycaster() // shoots rays to detect meshes
 
 const clock = new THREE.Clock()
 const loadingManager = manager() // track when meshes are loaded 
+const postProcessing = postprocessing(scene, camera, renderer)
+
 
 //scene.background = HDRI() // idk if ill need the backgroud doesnt fit the vibe
 scene.environment = HDRI() // for lighting 
@@ -79,12 +84,12 @@ function init(){
  // scene.add(meshes.standard)
  // scene.add(lights.directional)
 
-
   webcam()
   instances()
   raycast()
   animate()
 }
+
 // This is the countdown interface ill make it a function on main cuz it seems easier
 // perhaps its better to put in in the html and css files respectively but idk how to do that yet
 
@@ -106,11 +111,11 @@ function countdownUI() {
   transform: translate(-50%, -50%);
   font-size: 150px;
   font-weight: bold;
-  color: red;
+  color: #880808;
   text-shadow: 0 0 20px black;
   display: none; /* hide until needed */
   z-index: 1000; /* at the very top of all elements */
-  font-family: Arial, sans-serif;
+  font-family: 'Courier New', monospace;
   `
 
   //adds the div to the page
@@ -173,7 +178,7 @@ function photoBoothSequence(){
             y: 0,
             z: 1.6,
             duration: 2,
-            animation: "power4.inOut",
+            //ease: "power4.inOut",
 					})
           gsap.to(camera.rotation, {
             x: 0,
@@ -181,20 +186,20 @@ function photoBoothSequence(){
             z: 0,
             duration: 2,
             delay: 1,
-            animation: "power4.inOut",
+            //ease: "power4.inOut",
           })
           gsap.to(camera.position, {
             x: -.3,
             z: 1.40,
             duration: 1,
             delay: 1.4,
-            animation: "power4.inOut",
+            //ease: "power4.inOut",
          })
          gsap.to(meshes.webcam, {
           visible: true,
           duration: 1, 
           delay: 3.4,
-          animation: "power4.inOut", //check animation it says these aren't imported or something in console 
+          //ease: "power4.inOut", //check animation it says these aren't imported or something in console 
           onComplete: () => { 
             
             // we now call the function we made to take the three pictures
@@ -243,13 +248,14 @@ function countdownAndPictures(){
       } else {
         clearInterval(countdownInterval) // stops the countdown
 
-        countdownDiv.textContent = 'Smile :)' // shows cute message instead of 0
+        countdownDiv.textContent = 'Smile!' // shows cute message instead of 0
 
         setTimeout(() => {
 
           captureSnapshot() //take the picture
 
-          // then we will prompr the bloom effect to act as flash here
+          flash() // we call the flash function
+
           // along with like a shutter sound perhaps
 
           countdownDiv.style.display = 'none'
@@ -277,7 +283,21 @@ function countdownAndPictures(){
 
   takePhoto(0) // initializes the first call to function
 }
+function flash(){
+  // use bloom to create the flash effect 
+  gsap.to(postProcessing.bloomPass, { //really quick high intensity 
+    strength: 1,
+    duration: 0.1, 
+    onComplete: () => {
 
+      gsap.to(postProcessing.bloomPass, { //slower dim 
+        strength: 0, 
+        duration: 0.5, 
+      })
+    }
+  })
+
+}
 function captureSnapshot() {
   renderer.render(scene, camera)
   const canvas = document.createElement('canvas') // not added to canvas is temporary 
@@ -354,5 +374,5 @@ function animate(){
  // meshes.default.rotation.x -= 0.01
   //meshes.default.rotation.y -= 0.01
   requestAnimationFrame(animate)
-  renderer.render(scene, camera)
+  postProcessing.composer.render()
 }
