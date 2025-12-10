@@ -41,8 +41,7 @@ const raycaster = new THREE.Raycaster() // shoots rays to detect meshes
 const clock = new THREE.Clock()
 const loadingManager = manager() // track when meshes are loaded 
 const postProcessing = postprocessing(scene, camera, renderer)
-
-
+const shutterSound = new Audio('./Shutter.wav') // we assign audio file to a variable 
 //scene.background = HDRI() // idk if ill need the backgroud doesnt fit the vibe
 scene.environment = HDRI() // for lighting 
 
@@ -50,6 +49,7 @@ scene.environment = HDRI() // for lighting
 let video
 let capturedPhotos = [] // array that stores photos 
 // I believe in Python this is like capturedPhotos = []
+
 
 
 init()
@@ -88,6 +88,8 @@ function init(){
   instances()
   raycast()
   animate()
+  countdownUI() // how was this not here before lol
+  welcomeScreen()
 }
 
 // This is the countdown interface ill make it a function on main cuz it seems easier
@@ -122,6 +124,90 @@ function countdownUI() {
   document.body.appendChild(countdownDiv) 
 
 }
+
+// we need to create a welcome screen which also acts as the 
+// button that will allow us to play sound 
+
+function welcomeScreen(){
+  // we need a full screen div 
+
+  const welcomeDiv = document.createElement('div')
+  welcomeDiv.id = "welcomeDiv"
+  welcomeDiv.style.cssText = `
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9); /* a lil transparent */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000; // on top of everything else
+  `
+  const welcomeText = document.createElement('h1')
+  welcomeText.textContent =  "Welcome to Fortografias Photobooth!"
+  welcomeText.style.cssText = `
+  color: white;
+  font-size: 48px;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 30px;
+  text-align: center;
+  `
+  const subtitle = document.createElement('p')
+  subtitle.textContent = 'Click the photobooth to take your photos!'
+  subtitle.style.cssText = `
+  color: white;
+  font-size: 24px;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 50px;
+  `
+  const enterButton = document.createElement('button')
+  enterButton.textContent = "ENTER"
+  enterButton.style.cssText = `
+  padding: 20px 60px;
+  font-size: 28px;
+  background-color: #880808;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: transform 0.2s; /* this gives a smooth hover effect */
+  `
+
+  // little affordance on the button
+  enterButton.onmouseenter = () => {
+    enterButton.style.transform = 'scale(1.1)' // gets slightly bigger when you hover over it 
+  }
+  enterButton.onmouseleave = () => {
+    enterButton.style.transform = 'scale(1.0)' // back to normal size when not hovering
+  }
+
+  // this is where we are going to sneak in the sound enabling lol
+  enterButton.onclick = () => {
+    // we play the sound very very low to unlock the audio 
+    // browsers want the audio to be triggered by the user 
+
+    shutterSound.volume = 0.0 // so it is inaudible here 
+    shutterSound.play().then(() => {
+      shutterSound.pause() // immediately we stop the sound to make sure it doesn't play further
+      shutterSound.currentTime = 0 // reset audio to start 
+      shutterSound.volume = 1.0 // make volume go back to normal 
+      console.log("Audio unlocked!") // so we know this worked lol
+    }).catch(e => console.log('Audio still cant play :(', e)) // this means our sneaky permission granting failed 
+
+    document.body.removeChild(welcomeDiv) // close the welcome screen
+  }
+
+  welcomeDiv.appendChild(welcomeText)
+  welcomeDiv.appendChild(subtitle)
+  welcomeDiv.appendChild(enterButton) // add components to welcome div
+
+  document.body.appendChild(welcomeDiv) // add welcome div to overall html
+}
+
 function webcam() {
 	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) { // checks if we can use webcam 
 		const constraints = {
@@ -256,7 +342,7 @@ function countdownAndPictures(){
 
           flash() // we call the flash function
 
-          // along with like a shutter sound perhaps
+          shutter() // we call the shutter function
 
           countdownDiv.style.display = 'none'
           // we hide the div again 
@@ -289,7 +375,6 @@ function flash(){
     strength: 1,
     duration: 0.1, 
     onComplete: () => {
-
       gsap.to(postProcessing.bloomPass, { //slower dim 
         strength: 0, 
         duration: 0.5, 
@@ -297,6 +382,14 @@ function flash(){
     }
   })
 
+}
+
+function shutter(){
+  shutterSound.currentTime = 0 // makes the sound restart from beginning
+
+  //play the sound
+  // .catch is to handle errors if we can't play audio
+  shutterSound.play().catch(e => console.log("audio play error :(", e))
 }
 function captureSnapshot() {
   renderer.render(scene, camera)
