@@ -356,9 +356,9 @@ function countdownAndPictures(){
             // very recursion vibes 
           } else {
             setTimeout(() => {
-              // we will add instruction to make the photostrip here
-              // probably like a second delay 
-            })
+              // we add instruction to make the photostrip here
+              makePhotoStrip() // instruction in a separate function
+            }, 1000) // one second delay
           }
         }, 500)
       }
@@ -433,6 +433,116 @@ function captureSnapshot() {
   // console.log("Snapshot captured automatically!")
 
   // ^ deleted it and everything still works so I think its fine
+}
+
+function makePhotoStrip(){
+  // we make a canvas for the photo strip 
+  // this is like a div but lets us draw graphics on it with javascript 
+  const photoStripCanvas = document.createElement('canvas')
+
+  // we get the 2D drawing context not sure what this really means yet
+  // however if we don't do it the thingy doesn't work so...
+  const ctx = photoStripCanvas.getContext('2d')
+
+  // define the dimensions of each photo in the strip using variables
+  const photoWidth = 600
+  const photoHeight = 400
+  const padding = 40
+
+  //now we set the size of the canvas
+  photoStripCanvas.width = photoWidth + (padding * 2)
+  photoStripCanvas.height = (photoHeight * 3) + (padding * 4)
+
+  // fill background really we make a square that fills the canvas
+  ctx.fillStyle = 'black'
+  ctx.fillRect(0,0, photoStripCanvas.width, photoStripCanvas.height)
+  
+  // we must track that our pictures are loading 
+  let loadedPicCount = 0
+
+  // we loop through our array of photos 
+  capturedPhotos.forEach((photoData, index) => {
+
+    // we make an image object for each iteration
+    const img = new Image()
+
+    // when we are sure the image loads we add it to the canvas
+    img.onload = () => {
+      // setting calculation for the image position
+      const yPos = padding + (index * (photoHeight + padding))
+
+      // save the canvas
+      ctx.save()
+
+      // I personally don't want the pictures mirrored so we fix that
+      ctx.translate(padding + photoWidth, 0)
+      ctx.scale(-1,1)
+      ctx.drawImage(img, 0, yPos, photoWidth, photoHeight)
+
+      //make sure we return the canvas to original state for the rest of the iterations
+      ctx.restore()
+
+      loadedPicCount ++ 
+
+      // we check if all pictures have been added 
+      // if they have we add finishing touches
+      if (loadedPicCount == 3) {
+
+        //little border
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 3
+        ctx.strokeRect(5,5, photoStripCanvas.width - 10, photoStripCanvas.height - 10)
+        
+        //add the date on there 
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '20px Courier New, monospace'
+        ctx.textAlign = 'center'
+        
+        // make date into string
+        const date = new Date().toLocaleDateString()
+
+        //add it to the bottom center
+        ctx.fillText(date, photoStripCanvas.width / 2, photoStripCanvas.height - 15)
+
+        // finally we mke the canvas to a png 
+        const photoStripData = photoStripCanvas.toDataURL('image/png')
+
+        // here we will add transition that takes viewer outside of the photobooth
+        // and shows a download screen
+
+        takeToDownload(photoStripData) // we also send it the photostrip png
+      }
+    }
+
+    img.src = photoData
+  })
+}
+
+function takeToDownload(photoStripData){
+  // we must hide the webcam again 
+  gsap.to(meshes.webcam, {
+    visible: false,
+    duration: 0.5
+  })
+  // move the camera to original position
+  gsap.to(camera.position, {
+    x: 0,
+    y: 0, 
+    z: 5, 
+    duration: 2, 
+    ease: "power2.inOut"
+  })
+  //reset camera rotation
+  gsap.to(camera.rotation, {
+    x: 0, 
+    y:0, 
+    z: 0, 
+    duration: 2, 
+    ease: "power2.inOut",
+    onComplete: () => {
+      // we show the download page!
+    }
+  })
 }
 
 function instances(){
