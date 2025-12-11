@@ -626,9 +626,11 @@ function downloadPage(photoStripData){
   //when click button remove overlay and restart everything 
   resetBtn.onclick = () => {
     document.body.removeChild(downloadPg)
-
     // then we call function to reset everything 
     reset()
+    setTimeout(() => {
+            photoBoothSequence()
+    }, 500)
   }
 
   downloadPg.appendChild(preview)
